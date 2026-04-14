@@ -46,8 +46,7 @@ TIM_HandleTypeDef htim2;
 osThreadId MainTaskHandle;
 /* USER CODE BEGIN PV */
 QueueHandle_t buttonPushQueue;
-//uint32_t currState = 1;
-//uint32_t prevState = ;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -274,9 +273,16 @@ static void MX_GPIO_Init(void)
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	if (GPIO_Pin == GPIO_PIN_13){
 
-		uint8_t buttonSignal = 1;
+		static uint32_t last_interrupt_time = 0;
+		uint32_t interrupt_time = xTaskGetTickCountFromISR();
 
-		xQueueSendFromISR(buttonPushQueue, &buttonSignal, NULL);
+		if (interrupt_time - last_interrupt_time > pdMS_TO_TICKS(50)) {
+
+			uint8_t buttonSignal = 1;
+
+			xQueueSendFromISR(buttonPushQueue, &buttonSignal, NULL);
+		}
+		last_interrupt_time = interrupt_time;
 
 	}
 }
@@ -293,7 +299,7 @@ void PwmControl(void * argument){
 	for(;;){
 		if (xQueueReceive(buttonPushQueue, &receivedSignal, portMAX_DELAY) == pdPASS){
 
-			vTaskDelay(pdMS_TO_TICKS(200));
+
 
 			duty+=10;
 
